@@ -353,9 +353,14 @@ class S3Ansible(object):
                         'job flow is complete.'
                     ).format(prefix)
                 return
-            if 'NoSuchLifecycleConfiguration' in errors:
-                # Raise exception iff lifecycle config exists
-                raise RuntimeError(errors)
+            # BTL: If we're going to check for something, I think we want
+            # to check whether a lifecycle configuration exists for our
+            # prefix already.  The check below seems to barf when there are
+            # no configurations for the bucket at all, which seems like it
+            # should be fine.
+            #if 'NoSuchLifecycleConfiguration' in errors:
+            #    # Raise exception iff lifecycle config exists
+            #    raise RuntimeError(errors)
         add_rule = True
         for rule in rules:
             try:
