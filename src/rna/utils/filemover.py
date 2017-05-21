@@ -102,21 +102,27 @@ class FileMover(object):
                 pass
             command_list = ['cp', filename, url.to_url()]
         else:
-            parent_dir = os.path.dirname(filename)
-            dir_chain = []
-            while parent_dir != 'hdfs:':
-                dir_chain.append(parent_dir)
-                parent_dir = os.path.dirname(filename)
-            for dir_to_create in dir_chain[::-1]:
-                command_list = ['hdfs', 'dfs', '-mkdir', dir_to_create]
-                subprocess.Popen(command_list, stdout=sys.stderr).wait()
-            command_list = ['hdfs', 'dfs', '-put']
-            command_list.append(filename)
-            command_list.append('/'.join([url.to_url(),
-                                            os.path.basename(filename)]))
-        exit_level = subprocess.Popen(command_list, stdout=sys.stderr).wait()
-        if exit_level > 0:
+            assert url.to_url().startswith('hdfs:'), (
+                    'Cannot identify filesystem for "{}".'
+                ).format(url.to_url())
+            command_list = ['hdfs', 'dfs', '-mkdir', '-p',
+                                    os.path.dirname(url.to_url())]
             command = ' '.join(command_list)
+            print >>sys.stderr, (
+                    'Creating directory with command "{}".'
+                ).format(' '.join(command_list))
+            subprocess.Popen(command,
+                stdout=sys.stderr, shell=True,
+                executable='/bin/bash').wait()
+            command_list = ['hdfs', 'dfs', '-put', filename, url.to_url()]
+        command = ' '.join(command_list)
+        print >>sys.stderr, 'Uploading with command "{}"....'.format(
+                command
+            )
+        exit_level = subprocess.Popen(
+                command, stdout=sys.stderr,
+                shell=True, executable='/bin/bash').wait()
+        if exit_level > 0:
             raise RuntimeError('Non-zero exitlevel %d from push command "%s".'
                                % (exit_level, command))
 
@@ -222,7 +228,8 @@ class FileMover(object):
             oldp = os.getcwd()
             os.chdir(dest)
             command_list = [
-                    'curl', '-s', '-O', '-J', '-v', '-L', '--connect-timeout', '600'
+                    'curl', '-s', '-O', '-J', '-v', '-L',
+                    '--connect-timeout', '600'
                 ]
             command_list.append(url.to_url())
             command = ' '.join(command_list)
