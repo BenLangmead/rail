@@ -16,14 +16,10 @@ space. The alternative URLs at Webfactional are Abhi Nellore's space.
 import os
 
 linux_dependencies = {
-    'bowtie1' : ['http://downloads.sourceforge.net/project/bowtie-bio/'
-                 'bowtie/1.1.2/bowtie-1.1.2-linux-x86_64.zip',
-                 'http://verve.webfactional.com/mirror/linux/'
-                 'bowtie-1.1.2-linux-x86_64.zip'],
-    'bowtie2' : ['http://downloads.sourceforge.net/project/bowtie-bio/'
-                 'bowtie2/2.3.2/bowtie2-2.3.2-legacy-linux-x86_64.zip',
-                 'http://verve.webfactional.com/mirror/linux/'
-                  'bowtie2-2.3.2-legacy-linux-x86_64.zip'],
+    'bowtie1' : ['https://s3.amazonaws.com/rail-emr/dependencies/'
+                 'bowtie-1.2.zip'],
+    'bowtie2' : ['https://s3.amazonaws.com/rail-emr/dependencies/'
+                 'bowtie2-2.3.2.zip'],
     'bedgraphtobigwig' : ['ftp://ftp.ccb.jhu.edu/pub/langmead/rail/'
                           'linux.x86_64/bedGraphToBigWig',
                           'http://verve.webfactional.com/mirror/linux/'
