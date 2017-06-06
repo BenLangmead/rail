@@ -1,0 +1,281 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		ECAA035F1ED217010059D1DA /* rail_rna_align.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ECAA035D1ED217010059D1DA /* rail_rna_align.cpp */; };
+		ECAA03621ED21B1A0059D1DA /* manifest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ECAA03601ED21B1A0059D1DA /* manifest.cpp */; };
+		ECAA03651ED222DE0059D1DA /* tokenize.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ECAA03631ED222DE0059D1DA /* tokenize.cpp */; };
+		ECAA03681ED226320059D1DA /* file_util.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ECAA03661ED226320059D1DA /* file_util.cpp */; };
+		ECAA036B1ED22F860059D1DA /* hadoop_util.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ECAA03691ED22F860059D1DA /* hadoop_util.cpp */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		ECAA03511ED216BC0059D1DA /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		ECAA03531ED216BC0059D1DA /* rail-rna-align */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "rail-rna-align"; sourceTree = BUILT_PRODUCTS_DIR; };
+		ECAA035D1ED217010059D1DA /* rail_rna_align.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = rail_rna_align.cpp; path = ../../../src/rna/steps/rail_rna_align.cpp; sourceTree = "<group>"; };
+		ECAA035E1ED217010059D1DA /* rail_rna_align.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = rail_rna_align.hpp; path = ../../../src/rna/steps/rail_rna_align.hpp; sourceTree = "<group>"; };
+		ECAA03601ED21B1A0059D1DA /* manifest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = manifest.cpp; path = ../../../src/rna/utils/manifest.cpp; sourceTree = "<group>"; };
+		ECAA03611ED21B1A0059D1DA /* manifest.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = manifest.hpp; path = ../../../src/rna/utils/manifest.hpp; sourceTree = "<group>"; };
+		ECAA03631ED222DE0059D1DA /* tokenize.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = tokenize.cpp; path = ../../../src/rna/utils/tokenize.cpp; sourceTree = "<group>"; };
+		ECAA03641ED222DE0059D1DA /* tokenize.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = tokenize.hpp; path = ../../../src/rna/utils/tokenize.hpp; sourceTree = "<group>"; };
+		ECAA03661ED226320059D1DA /* file_util.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = file_util.cpp; path = ../../../src/rna/utils/file_util.cpp; sourceTree = "<group>"; };
+		ECAA03671ED226320059D1DA /* file_util.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = file_util.hpp; path = ../../../src/rna/utils/file_util.hpp; sourceTree = "<group>"; };
+		ECAA03691ED22F860059D1DA /* hadoop_util.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = hadoop_util.cpp; path = ../../../src/rna/utils/hadoop_util.cpp; sourceTree = "<group>"; };
+		ECAA036A1ED22F860059D1DA /* hadoop_util.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = hadoop_util.hpp; path = ../../../src/rna/utils/hadoop_util.hpp; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		ECAA03501ED216BC0059D1DA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		ECAA034A1ED216BC0059D1DA = {
+			isa = PBXGroup;
+			children = (
+				ECAA03551ED216BC0059D1DA /* rail-tools */,
+				ECAA03541ED216BC0059D1DA /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		ECAA03541ED216BC0059D1DA /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				ECAA03531ED216BC0059D1DA /* rail-rna-align */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		ECAA03551ED216BC0059D1DA /* rail-tools */ = {
+			isa = PBXGroup;
+			children = (
+				ECAA035D1ED217010059D1DA /* rail_rna_align.cpp */,
+				ECAA035E1ED217010059D1DA /* rail_rna_align.hpp */,
+				ECAA03601ED21B1A0059D1DA /* manifest.cpp */,
+				ECAA03611ED21B1A0059D1DA /* manifest.hpp */,
+				ECAA03631ED222DE0059D1DA /* tokenize.cpp */,
+				ECAA03641ED222DE0059D1DA /* tokenize.hpp */,
+				ECAA03661ED226320059D1DA /* file_util.cpp */,
+				ECAA03671ED226320059D1DA /* file_util.hpp */,
+				ECAA03691ED22F860059D1DA /* hadoop_util.cpp */,
+				ECAA036A1ED22F860059D1DA /* hadoop_util.hpp */,
+			);
+			path = "rail-tools";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		ECAA03521ED216BC0059D1DA /* rail-rna-align */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = ECAA035A1ED216BC0059D1DA /* Build configuration list for PBXNativeTarget "rail-rna-align" */;
+			buildPhases = (
+				ECAA034F1ED216BC0059D1DA /* Sources */,
+				ECAA03501ED216BC0059D1DA /* Frameworks */,
+				ECAA03511ED216BC0059D1DA /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "rail-rna-align";
+			productName = "rail-tools";
+			productReference = ECAA03531ED216BC0059D1DA /* rail-rna-align */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		ECAA034B1ED216BC0059D1DA /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0830;
+				ORGANIZATIONNAME = jhu;
+				TargetAttributes = {
+					ECAA03521ED216BC0059D1DA = {
+						CreatedOnToolsVersion = 8.3.2;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = ECAA034E1ED216BC0059D1DA /* Build configuration list for PBXProject "rail-tools" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = ECAA034A1ED216BC0059D1DA;
+			productRefGroup = ECAA03541ED216BC0059D1DA /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				ECAA03521ED216BC0059D1DA /* rail-rna-align */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		ECAA034F1ED216BC0059D1DA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				ECAA036B1ED22F860059D1DA /* hadoop_util.cpp in Sources */,
+				ECAA03621ED21B1A0059D1DA /* manifest.cpp in Sources */,
+				ECAA03651ED222DE0059D1DA /* tokenize.cpp in Sources */,
+				ECAA035F1ED217010059D1DA /* rail_rna_align.cpp in Sources */,
+				ECAA03681ED226320059D1DA /* file_util.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		ECAA03581ED216BC0059D1DA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.12;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		ECAA03591ED216BC0059D1DA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.12;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		ECAA035B1ED216BC0059D1DA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		ECAA035C1ED216BC0059D1DA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		ECAA034E1ED216BC0059D1DA /* Build configuration list for PBXProject "rail-tools" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				ECAA03581ED216BC0059D1DA /* Debug */,
+				ECAA03591ED216BC0059D1DA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		ECAA035A1ED216BC0059D1DA /* Build configuration list for PBXNativeTarget "rail-rna-align" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				ECAA035B1ED216BC0059D1DA /* Debug */,
+				ECAA035C1ED216BC0059D1DA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = ECAA034B1ED216BC0059D1DA /* Project object */;
+}
