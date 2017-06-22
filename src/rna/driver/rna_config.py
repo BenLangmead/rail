@@ -3168,10 +3168,10 @@ sudo ln -s /home/hadoop/.ncbi /home/.ncbi
             help=('Hadoop log directory on S3 (def: output directory + '
                   '".logs")')
         )
-        elastic_parser.add_argument('--ami-version', type=str, required=False,
+        elastic_parser.add_argument('--release-label', type=str, required=False,
             metavar='<str>',
-            default='3.11.0',
-            help='Amazon Machine Image version'
+            default='5.6.0',
+            help='Amazon EMR release label'
         )
         elastic_parser.add_argument('--visible-to-all-users',
             action='store_const',
@@ -3383,6 +3383,7 @@ sudo ln -s /home/hadoop/.ncbi /home/.ncbi
                 }
             },
             {
+                # TODO:
                 'Name' : 'Configure Hadoop',
                 'ScriptBootstrapAction' : {
                     'Args' : [
