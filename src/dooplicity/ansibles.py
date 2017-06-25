@@ -513,7 +513,7 @@ def parsed_credentials(profile='default', base=None):
                                 region, service role, instance profile)
     """
     (aws_access_key_id, aws_secret_access_key, region, service_role,
-        instance_profile) = None, None, None, None, None
+        instance_profile, auto_scaling_role) = None, None, None, None, None, None
     if profile == 'default':
         # Search environment variables for keys first if profile is default
         try:
@@ -540,8 +540,8 @@ def parsed_credentials(profile='default', base=None):
                         if os.path.exists(a_file)]
         try:
             (region_set, access_key_id_set, secret_access_key_set,
-                service_role_set, instance_profile_set) = (
-                    False, False, False, False, False
+                service_role_set, instance_profile_set, auto_scaling_role_set) = (
+                    False, False, False, False, False, False
                 )
             for to_open in [cred_file, config_file]:
                 with open(to_open) as config_stream:
@@ -570,10 +570,15 @@ def parsed_credentials(profile='default', base=None):
                             service_role = tokens[1]
                             service_role_set = True
                         elif (tokens[0] == 'instance_profile'
-                                and grab_roles
-                                and not instance_profile_set):
+                                  and grab_roles
+                                  and not instance_profile_set):
                             instance_profile = tokens[1]
                             instance_profile_set = True
+                        elif (tokens[0] == 'auto_scaling_role'
+                                  and grab_roles
+                                  and not auto_scaling_role_set):
+                            auto_scaling_role = tokens[1]
+                            auto_scaling_role_set = True
                         else:
                             line = line.strip()
                             if line[0] == '[' and line[-1] == ']':
@@ -599,7 +604,7 @@ def parsed_credentials(profile='default', base=None):
             else:
                 raise RuntimeError(message)
     return (aws_access_key_id, aws_secret_access_key, 
-                region, service_role, instance_profile)
+                region, service_role, instance_profile, auto_scaling_role)
 
 class AWSAnsible(object):
     """ Interacts with AWS via POST requests (so far). See AWS API
@@ -619,7 +624,7 @@ class AWSAnsible(object):
     def __init__(self, profile='default', region=None, valid_regions=None,
                     base_uri='https://elasticmapreduce.amazonaws.com'):
         # Set service and job flow roles to None for now
-        self.service_role, self.instance_profile = None, None
+        self.service_role, self.instance_profile, self.auto_scaling_role = None, None, None
         if base_uri[:8] == 'https://':
             base_suffix = base_uri[8:]
             self.base_prefix = base_uri[:8]
@@ -643,7 +648,8 @@ class AWSAnsible(object):
             self._aws_secret_access_key, 
             self.region,
             self.service_role,
-            self.instance_profile) = parsed_credentials(profile)
+            self.instance_profile,
+            self.auto_scaling_role) = parsed_credentials(profile)
         if region is not None:
             # Always override region
             self.region = region

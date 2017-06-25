@@ -122,14 +122,11 @@ def rail_help_wrapper(prog):
 
 '''These are placed here for convenience; their locations may change
 on EMR depending on bootstraps.'''
-_hadoop_streaming_jar = '/home/hadoop/contrib/streaming/hadoop-streaming.jar'
+_hadoop_streaming_jar = 'hadoop-streaming.jar'  # as of AMI4, in path
 _jar_target = '/mnt/lib'
 _custom_output_formats_jar = _jar_target + '/custom-output-formats.jar'
 _relevant_elephant_jar = _jar_target + '/relevant-elephant.jar'
 _mod_partitioner_jar = _jar_target + '/mod-partitioner.jar'
-_hadoop_lzo_jar = ('/home/hadoop/.versions/2.4.0/share/hadoop'
-                   '/common/lib/hadoop-lzo.jar')
-_s3distcp_jar = '/home/hadoop/lib/emr-s3distcp-1.0.jar'
 _hdfs_temp_dir = 'hdfs:///railtemp'
 _base_combine_split_size = 268435456 # 250 MB
 _elastic_bowtie1_idx = '/mnt/space/index/genome'
@@ -715,7 +712,7 @@ def step(name, inputs, output,
         'Name' : name,
         'ActionOnFailure' : action_on_failure,
         'HadoopJarStep' : {
-            'Jar' : jar,
+            'Jar' : 'command-runner.jar',
             'Args' : []
         }
     }
@@ -811,7 +808,7 @@ def step(name, inputs, output,
     return to_return
 
 # TODO: Flesh out specification of protostep and migrate to Dooplicity
-def steps(protosteps, action_on_failure, jar, step_dir, reducer_count,
+def steps(protosteps, action_on_failure, step_dir, reducer_count,
             intermediate_dir, extra_args=[], unix=False, no_direct_copy=False):
     """ Turns list with "protosteps" into well-formed StepConfig list.
 
@@ -851,7 +848,6 @@ def steps(protosteps, action_on_failure, jar, step_dir, reducer_count,
 
         protosteps: array of protosteps
         action_on_failure: action on failure to take
-        jar: path to Hadoop Streaming jar
         step_dir: where to find Python scripts for steps
         reducer_count: number of reducers; determines number of tasks
         unix: performs UNIX-like path joins; also inserts pypy in for
@@ -937,7 +933,6 @@ def steps(protosteps, action_on_failure, jar, step_dir, reducer_count,
                                         protostep['reducer'])]) 
                         if 'reducer' in protostep else 'cat',
                 action_on_failure=action_on_failure,
-                jar=jar,
                 tasks=reducer_task_count,
                 partition_options=(protostep['partition']
                     if 'partition' in protostep else None),
@@ -974,9 +969,8 @@ def steps(protosteps, action_on_failure, jar, step_dir, reducer_count,
                                     + protostep['name'] + '"'),
                         'ActionOnFailure' : action_on_failure,
                         'HadoopJarStep' : {
-                            'Jar' : _hadoop_lzo_jar,
-                            'Args' : ['com.hadoop.compression.lzo'
-                                      '.DistributedLzoIndexer',
+                            'Jar' : 'command-runner.jar',
+                            'Args' : ['hadoop-lzo',
                                       intermediate_output]
                         }
                     }
@@ -989,8 +983,9 @@ def steps(protosteps, action_on_failure, jar, step_dir, reducer_count,
                                     + protostep['name'] + '" to S3'),
                         'ActionOnFailure' : action_on_failure,
                         'HadoopJarStep' : {
-                            'Jar' : _s3distcp_jar,
-                            'Args' : ['--src', intermediate_output,
+                            'Jar' : 'command-runner.jar',
+                            'Args' : ['s3-dist-cp',
+                                      '--src', intermediate_output,
                                       '--dest', final_output,
                                       '--deleteOnSuccess']
                         }
@@ -1006,7 +1001,8 @@ class RailRnaErrors(object):
     def __init__(self, manifest, output_dir, isofrag_idx=None,
             intermediate_dir='./intermediate', force=False, aws_exe=None,
             profile='default', region=None, service_role=None,
-            instance_profile=None, verbose=False, curl_exe=None,
+            instance_profile=None, auto_scaling_role=None,
+            verbose=False, curl_exe=None,
             max_task_attempts=4, dbgap_key=None, align_flow=False
         ):
         '''Store all errors uncovered in a list, then output. This prevents the
@@ -1028,6 +1024,8 @@ class RailRnaErrors(object):
         self.service_role = self.specified_service_role = service_role
         self.instance_profile = self.specified_instance_profile \
             = instance_profile
+        self.auto_scaling_role = self.specified_auto_scaling_role \
+            = auto_scaling_role
         self.dbgap_key = dbgap_key
         if not (float(max_task_attempts).is_integer()
                         and max_task_attempts >= 1):
@@ -1075,7 +1073,8 @@ class RailRnaErrors(object):
             self._aws_secret_access_key, 
             self.region,
             self.service_role,
-            self.instance_profile) = ab.parsed_credentials(self.profile,
+            self.instance_profile,
+            self.auto_scaling_role) = ab.parsed_credentials(self.profile,
                                                             base=self)
         if len(self.errors) != original_errors_size:
             if reason:
@@ -1110,11 +1109,18 @@ class RailRnaErrors(object):
                             'Attempting "EMR_EC2_DefaultRole".',
                             newline=True, carriage_return=False)
             self.instance_profile = 'EMR_EC2_DefaultRole'
+        if self.auto_scaling_role is None:
+            print_to_screen('Warning: EC2 auto-scaling role not found. '
+                            'Attempting "EMR_AutoScaling_DefaultRole".',
+                            newline=True, carriage_return=False)
+            self.auto_scaling_role = 'EMR_AutoScaling_DefaultRole'
         # Correct parameters that user specified
         if self.specified_region is not None:
             self.region = self.specified_region
         if self.specified_instance_profile is not None:
             self.instance_profile = self.specified_instance_profile
+        if self.specified_auto_scaling_role is not None:
+            self.auto_scaling_role = self.specified_auto_scaling_role
         if self.specified_service_role is not None:
             self.service_role = self.specified_service_role
         self.checked_programs.add('AWS CLI')
@@ -1151,7 +1157,8 @@ class RailRnaErrors(object):
             self._aws_secret_access_key, 
             self.region,
             self.service_role,
-            self.instance_profile) = ab.parsed_credentials(self.profile,
+            self.instance_profile,
+            self.auto_scaling_role) = ab.parsed_credentials(self.profile,
                                                             base=self)
         if len(self.errors) != original_errors_size:
             raise RuntimeError(('\n'.join(['%d) %s' % (i+1, error)
@@ -1232,6 +1239,11 @@ class RailRnaErrors(object):
                                     'Attempting "EMR_EC2_DefaultRole".',
                                     newline=True, carriage_return=False)
                     self.instance_profile = 'EMR_EC2_DefaultRole'
+                if self.auto_scaling_role is None:
+                    print_to_screen('Warning: EC2 auto-scaling role not found. '
+                                    'Attempting "EMR_AutoScaling_DefaultRole".',
+                                    newline=True, carriage_return=False)
+                    self.auto_scaling_role = 'EMR_AutoScaling_DefaultRole'
                 self.ec2_subnet_id = outputs['PublicSubnetId']
                 self.ec2_master_security_group_id = outputs[
                                                         'MasterSecurityGroupId'
@@ -1244,6 +1256,8 @@ class RailRnaErrors(object):
             self.region = self.specified_region
         if self.specified_instance_profile is not None:
             self.instance_profile = self.specified_instance_profile
+        if self.specified_auto_scaling_role is not None:
+            self.auto_scaling_role = self.specified_auto_scaling_role
         if self.specified_service_role is not None:
             self.service_role = self.specified_service_role
         self.checked_programs.add('AWS CLI')
@@ -2080,11 +2094,10 @@ class RailRnaElastic(object):
         to base instance of RailRnaErrors.
     """
     def __init__(self, base, check_manifest=False,
-        log_uri=None, ami_version='3.11.0',
+        log_uri=None, release_label='5.6.0',
         visible_to_all_users=False, tags='',
         name='Rail-RNA Job Flow',
         action_on_failure='TERMINATE_JOB_FLOW',
-        hadoop_jar=None,
         master_instance_count=1, master_instance_type='c1.xlarge',
         master_instance_bid_price=None, core_instance_count=1,
         core_instance_type=None, core_instance_bid_price=None,
@@ -2183,7 +2196,7 @@ class RailRnaElastic(object):
         if len(base.tags) == 1 and base.tags[0] == '':
             base.tags = []
         base.name = name
-        base.ami_version = ami_version
+        base.release_label = release_label
         # Initialize ansible for easy checks
         ansible = ab.Ansible(aws_exe=base.aws_exe, profile=base.profile)
         output_dir_url = ab.Url(base.output_dir)
@@ -2606,7 +2619,6 @@ cd ..
 """#!/usr/bin/env bash
 set -e
 export HOME=/home/hadoop
-printf '\\nexport HOME=/home/hadoop\\n' >>/home/hadoop/conf/hadoop-user-env.sh
 sudo ln -s /home/hadoop/.s3cfg /home/.s3cfg
 
 curl -OL https://github.com/s3tools/s3cmd/releases/download/v1.6.1/s3cmd-1.6.1.tar.gz
@@ -2989,10 +3001,6 @@ sudo ln -s /home/hadoop/.ncbi /home/.ncbi
                                                 action_on_failure
                                             ))
         base.action_on_failure = action_on_failure
-        if hadoop_jar is None:
-            base.hadoop_jar = _hadoop_streaming_jar
-        else:
-            base.hadoop_jar = hadoop_jar
         instance_type_message = ('Instance type (--instance-type) must be '
                                  'in the set {{"m1.small", "m1.large", '
                                  '"m1.xlarge", "c1.medium", "c1.xlarge", '
@@ -3200,11 +3208,6 @@ sudo ln -s /home/hadoop/.ncbi /home/.ncbi
             help=('writes intermediate data to HDFS before copying to S3; '
                   'helps ensure that low-probability data loss between steps '
                   'does not occur'))
-        elastic_parser.add_argument('--hadoop-jar', type=str, required=False,
-            metavar='<jar>',
-            default=None,
-            help=('Hadoop Streaming Java ARchive to use (def: AMI default)')
-        )
         elastic_parser.add_argument('--master-instance-count', type=int,
             metavar='<int>',
             required=False,
@@ -3320,6 +3323,13 @@ sudo ln -s /home/hadoop/.ncbi /home/.ncbi
             help=('IAM EC2 instance profile (def: from --profile if available'
                   '; otherwise, attempts "EMR_EC2_DefaultRole")')
         )
+        elastic_parser.add_argument('--auto-scaling-role', type=str,
+            metavar='<str>',
+            required=False,
+            default=None,
+            help=('IAM auto scaling role (def: from --profile if available'
+                  '; otherwise, attempts "EMR_AutoScaling_DefaultRole")')
+        )
         general_parser.add_argument(
             '--max-task-attempts', type=int, required=False,
             metavar='<int>',
@@ -3330,18 +3340,16 @@ sudo ln -s /home/hadoop/.ncbi /home/.ncbi
 
     @staticmethod
     def hadoop_debugging_steps(base):
+        # As described here:
+        # http://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-plan-debugging.html
         return [
             {
-                'ActionOnFailure' : base.action_on_failure,
+                'ActionOnFailure' : 'TERMINATE_JOB_FLOW',
                 'HadoopJarStep' : {
-                    'Args' : [
-                        ('s3://%s.elasticmapreduce/libs/'
-                         'state-pusher/0.1/fetch') % base.region
-                    ],
-                    'Jar' : ('s3://%s.elasticmapreduce/libs/'
-                             'script-runner/script-runner.jar') % base.region
+                    'Args' : [ 'state-pusher-script' ],
+                    'Jar' : 'command-runner.jar'
                 },
-                'Name' : 'Set up Hadoop Debugging'
+                'Name' : 'Enable Debugging'
             }
         ]
 
@@ -3370,6 +3378,55 @@ sudo ln -s /home/hadoop/.ncbi /home/.ncbi
             ]
 
     @staticmethod
+    def configurations(base):
+        return [
+            {"Classification": "yarn-env",
+             "Configurations": [],
+             "Properties": {
+                 "fs.s3n.multipart.uploads.enabled": "true",
+                 "yarn.nodemanager.pmem-check-enabled": "false",
+                 "yarn.nodemanager.vmem-check-enabled": "false",
+                 "yarn.nodemanager.resource.memory-mb": str(base.nodemanager_mem),
+                 "yarn.scheduler.minimum-allocation-mb": str(base.nodemanager_mem / base.max_tasks),
+                 "yarn.nodemanager.vmem-pmem-ratio": "2.1",
+                 "yarn.nodemanager.container-manager.thread-count": "1",
+                 "yarn.nodemanager.localizer.fetch.thread-count": "1"
+              }},
+            {"Classification": "mapred-site",
+             "Configurations": [],
+             "Properties": {
+                 "mapreduce.map.speculative": "true",
+                 "mapreduce.reduce.speculative": "true",
+                 "mapreduce.task.timeout": "1800000",
+                 "mapreduce.map.memory.mb": str(base.nodemanager_mem / base.max_tasks),
+                 "mapreduce.reduce.memory.mb": str(base.nodemanager_mem / base.max_tasks),
+                 "mapreduce.map.java.opts": "-Xmx%dm" % (base.nodemanager_mem / base.max_tasks * 8 / 10),
+                 "mapreduce.reduce.java.opts": "-Xmx%dm" % (base.nodemanager_mem / base.max_tasks * 8 / 10),
+                 "mapreduce.map.cpu.vcores": "1",
+                 "mapreduce.reduce.cpu.vcores": "1",
+                 "mapred.output.compress": "true",
+                 "mapreduce.reduce.maxattempts": str(base.max_task_attempts),
+                 "mapreduce.map.maxattempts": str(base.max_task_attempts),
+                 "mapreduce.job.maps": str(base.total_cores)
+              }},
+            {"Classification": "emrfs-site",
+             "Configurations": [],
+             "Properties": {
+                 "fs.s3.enableServerSideEncryption": "true",
+                 "fs.s3.consistent": "true" if base.consistent_view else "false"
+              }},
+            {"Classification": "hadoop-env",
+             "Properties": {},
+             "Configurations": [
+                 {"Classification": "export",
+                  "Configurations": [],
+                  "Properties": {
+                    "HOME": "/home/hadoop"
+                  }}
+             ]}
+        ]
+
+    @staticmethod
     def bootstrap(base):
         return [
             {
@@ -3381,70 +3438,6 @@ sudo ln -s /home/hadoop/.ncbi /home/.ncbi
                     ],
                     'Path' : 's3://elasticmapreduce/bootstrap-actions/add-swap'
                 }
-            },
-            {
-                # TODO:
-                'Name' : 'Configure Hadoop',
-                'ScriptBootstrapAction' : {
-                    'Args' : [
-                        '-c',
-                        'fs.s3n.multipart.uploads.enabled=true',
-                        '-y',
-                        'yarn.nodemanager.pmem-check-enabled=false',
-                        '-y',
-                        'yarn.nodemanager.vmem-check-enabled=false',
-                        '-y',
-                        'yarn.nodemanager.resource.memory-mb=%d'
-                        % base.nodemanager_mem,
-                        '-y',
-                        'yarn.scheduler.minimum-allocation-mb=%d'
-                        % (base.nodemanager_mem / base.max_tasks),
-                        '-y',
-                        'yarn.nodemanager.vmem-pmem-ratio=2.1',
-                        '-y',
-                        'yarn.nodemanager.container-manager.thread-count=1',
-                        '-y',
-                        'yarn.nodemanager.localizer.fetch.thread-count=1',
-                        '-m',
-                        'mapreduce.map.speculative=true',
-                        '-m',
-                        'mapreduce.reduce.speculative=true',
-                        '-m',
-                        'mapreduce.task.timeout=1800000',
-                        '-m',
-                        'mapreduce.map.memory.mb=%d'
-                        % (base.nodemanager_mem / base.max_tasks),
-                        '-m',
-                        'mapreduce.reduce.memory.mb=%d'
-                        % (base.nodemanager_mem / base.max_tasks),
-                        '-m',
-                        'mapreduce.map.java.opts=-Xmx%dm'
-                        % (base.nodemanager_mem / base.max_tasks * 8 / 10),
-                        '-m',
-                        'mapreduce.reduce.java.opts=-Xmx%dm'
-                        % (base.nodemanager_mem / base.max_tasks * 8 / 10),
-                        '-m',
-                        'mapreduce.map.cpu.vcores=1',
-                        '-m',
-                        'mapreduce.reduce.cpu.vcores=1',
-                        '-m',
-                        'mapred.output.compress=true',
-                        '-m',
-                        'mapreduce.reduce.maxattempts=%d' 
-                        % base.max_task_attempts,
-                        '-m',
-                        'mapreduce.map.maxattempts=%d'
-                        % base.max_task_attempts,
-                        '-m',
-                        'mapreduce.job.maps=%d' % base.total_cores,
-                        '-e',
-                        'fs.s3.enableServerSideEncryption=true'
-                    ] + (['-e', 'fs.s3.consistent=true']
-                            if base.consistent_view
-                            else ['-e', 'fs.s3.consistent=false']),
-                    'Path' : ('s3://%s.elasticmapreduce/bootstrap-actions/'
-                              'configure-hadoop' % base.region)
-                }
             }
         ]
 
@@ -3452,7 +3445,6 @@ sudo ln -s /home/hadoop/.ncbi /home/.ncbi
     def instances(base):
         assert base.master_instance_count >= 1
         to_return = {
-            'HadoopVersion' : '2.4.0',
             'InstanceGroups' : [
                 {
                     'InstanceCount' : base.master_instance_count,
@@ -5603,15 +5595,14 @@ class RailRnaElasticPreprocessJson(object):
     def __init__(self, manifest, output_dir, isofrag_idx=None,
         intermediate_dir='./intermediate', force=False, aws_exe=None,
         profile='default', region=None,
-        service_role=None, instance_profile=None,
+        service_role=None, instance_profile=None, auto_scaling_role=None,
         verbose=False, nucleotides_per_input=8000000, gzip_input=True,
         do_not_bin_quals=False, short_read_names=False,
         skip_bad_records=False, ignore_missing_sra_samples=False,
-        log_uri=None, ami_version='3.11.0',
+        log_uri=None, release_label='5.6.0',
         visible_to_all_users=False, tags='',
         name='Rail-RNA Job Flow',
         action_on_failure='TERMINATE_JOB_FLOW',
-        hadoop_jar=None,
         master_instance_count=1, master_instance_type='c1.xlarge',
         master_instance_bid_price=None, core_instance_count=1,
         core_instance_type=None, core_instance_bid_price=None,
@@ -5626,14 +5617,15 @@ class RailRnaElasticPreprocessJson(object):
             intermediate_dir=intermediate_dir,
             force=force, aws_exe=aws_exe, profile=profile,
             region=region, service_role=service_role,
-            instance_profile=instance_profile, verbose=verbose,
+            instance_profile=instance_profile,
+            auto_scaling_role=auto_scaling_role, verbose=verbose,
             max_task_attempts=max_task_attempts, dbgap_key=dbgap_key)
         RailRnaElastic(base, check_manifest=check_manifest,
-            log_uri=log_uri, ami_version=ami_version,
+            log_uri=log_uri, release_label=release_label,
             visible_to_all_users=visible_to_all_users, tags=tags,
             name=name,
             action_on_failure=action_on_failure,
-            hadoop_jar=hadoop_jar, master_instance_count=master_instance_count,
+            master_instance_count=master_instance_count,
             master_instance_type=master_instance_type,
             master_instance_bid_price=master_instance_bid_price,
             core_instance_count=core_instance_count,
@@ -5670,19 +5662,20 @@ class RailRnaElasticPreprocessJson(object):
                         path_join(True, base.intermediate_dir, 'preprocess'),
                         base.output_dir, elastic=True),
                     base.action_on_failure,
-                    base.hadoop_jar, _elastic_step_dir,
+                    _elastic_step_dir,
                     reducer_count, base.intermediate_dir, unix=True,
                     no_direct_copy=base.no_direct_copy
                 )
-        self._json_serial['AmiVersion'] = base.ami_version
+        self._json_serial['Applications'] = ['Hadoop']
+        self._json_serial['ReleaseLabel'] = base.release_label
         self._json_serial['ServiceRole'] = base.service_role
+        self._json_serial['AutoScalingRole'] = base.auto_scaling_role
         self._json_serial['JobFlowRole'] = base.instance_profile
         if base.log_uri is not None:
             self._json_serial['LogUri'] = base.log_uri
         else:
             self._json_serial['LogUri'] = base.output_dir + '.logs'
         self._json_serial['Name'] = base.name
-        self._json_serial['NewSupportedProducts'] = []
         self._json_serial['Tags'] = base.tags
         self._json_serial['VisibleToAllUsers'] = (
                 'true' if base.visible_to_all_users else 'false'
@@ -5694,6 +5687,7 @@ class RailRnaElasticPreprocessJson(object):
                 + RailRnaPreprocess.srabootstrap(base)
                 + RailRnaElastic.bootstrap(base)
             )
+        self._json_serial['Configurations'] = RailRnaElastic.configurations(base)
         self.base = base
     
     @property
@@ -5953,6 +5947,7 @@ class RailRnaElasticAlignJson(object):
         isofrag_idx=None, intermediate_dir='./intermediate',
         force=False, aws_exe=None, profile='default', region=None,
         service_role=None, instance_profile=None,
+        auto_scaling_role=None,
         verbose=False, bowtie1_exe=None, bowtie_idx='genome',
         bowtie1_build_exe=None, bowtie2_exe=None,
         bowtie2_build_exe=None, k=1, bowtie2_args='',
@@ -5970,9 +5965,9 @@ class RailRnaElasticAlignJson(object):
         drop_deletions=False, do_not_output_bam_by_chr=False,
         do_not_output_ave_bw_by_chr=False, do_not_drop_polyA_tails=False,
         deliverables='idx,tsv,bed,bw', bam_basename='alignments',
-        bed_basename='', tsv_basename='', log_uri=None, ami_version='3.11.0',
+        bed_basename='', tsv_basename='', log_uri=None, release_label='5.6.0',
         visible_to_all_users=False, tags='', name='Rail-RNA Job Flow',
-        action_on_failure='TERMINATE_JOB_FLOW', hadoop_jar=None,
+        action_on_failure='TERMINATE_JOB_FLOW',
         master_instance_count=1, master_instance_type='c1.xlarge',
         master_instance_bid_price=None, core_instance_count=1,
         core_instance_type=None, core_instance_bid_price=None,
@@ -5987,13 +5982,15 @@ class RailRnaElasticAlignJson(object):
             intermediate_dir=intermediate_dir,
             force=force, aws_exe=aws_exe, profile=profile,
             region=region, service_role=service_role,
-            instance_profile=instance_profile, verbose=verbose,
+            instance_profile=instance_profile,
+            auto_scaling_role=auto_scaling_role,
+            verbose=verbose,
             max_task_attempts=max_task_attempts, align_flow=True)
         RailRnaElastic(base, check_manifest=False,
-            log_uri=log_uri, ami_version=ami_version,
+            log_uri=log_uri, release_label=release_label,
             visible_to_all_users=visible_to_all_users, tags=tags,
             name=name, action_on_failure=action_on_failure,
-            hadoop_jar=hadoop_jar, master_instance_count=master_instance_count,
+            master_instance_count=master_instance_count,
             master_instance_type=master_instance_type,
             master_instance_bid_price=master_instance_bid_price,
             core_instance_count=core_instance_count,
@@ -6063,19 +6060,20 @@ class RailRnaElasticAlignJson(object):
                     RailRnaAlign.protosteps(base, base.input_dir,
                                                         elastic=True),
                     base.action_on_failure,
-                    base.hadoop_jar, _elastic_step_dir,
+                    _elastic_step_dir,
                     reducer_count, base.intermediate_dir, unix=True,
                     no_direct_copy=base.no_direct_copy
                 )
-        self._json_serial['AmiVersion'] = base.ami_version
+        self._json_serial['Applications'] = ['Hadoop']
+        self._json_serial['ReleaseLabel'] = base.release_label
         self._json_serial['ServiceRole'] = base.service_role
+        self._json_serial['AutoScalingRole'] = base.auto_scaling_role
         self._json_serial['JobFlowRole'] = base.instance_profile
         if base.log_uri is not None:
             self._json_serial['LogUri'] = base.log_uri
         else:
             self._json_serial['LogUri'] = base.output_dir + '.logs'
         self._json_serial['Name'] = base.name
-        self._json_serial['NewSupportedProducts'] = []
         self._json_serial['Tags'] = base.tags
         self._json_serial['VisibleToAllUsers'] = (
                 'true' if base.visible_to_all_users else 'false'
@@ -6086,6 +6084,7 @@ class RailRnaElasticAlignJson(object):
                 + RailRnaAlign.bootstrap(base)
                 + RailRnaElastic.bootstrap(base)
             )
+        self._json_serial['Configurations'] = RailRnaElastic.configurations(base)
         self.base = base
     
     @property
@@ -6379,7 +6378,7 @@ class RailRnaElasticAllJson(object):
     def __init__(self, manifest, output_dir, isofrag_idx=None,
         intermediate_dir='./intermediate', force=False, aws_exe=None,
         profile='default', region=None,
-        service_role=None, instance_profile=None,
+        service_role=None, instance_profile=None, auto_scaling_role=None,
         verbose=False, nucleotides_per_input=8000000, gzip_input=True,
         do_not_bin_quals=False, short_read_names=False,
         skip_bad_records=False, ignore_missing_sra_samples=False,
@@ -6399,9 +6398,9 @@ class RailRnaElasticAllJson(object):
         drop_deletions=False, do_not_output_bam_by_chr=False,
         do_not_output_ave_bw_by_chr=False, do_not_drop_polyA_tails=False,
         deliverables='idx,tsv,bed,bw', bam_basename='alignments',
-        bed_basename='', tsv_basename='', log_uri=None, ami_version='3.11.0',
+        bed_basename='', tsv_basename='', log_uri=None, release_label='5.6.0',
         visible_to_all_users=False, tags='', name='Rail-RNA Job Flow',
-        action_on_failure='TERMINATE_JOB_FLOW', hadoop_jar=None,
+        action_on_failure='TERMINATE_JOB_FLOW',
         master_instance_count=1, master_instance_type='c1.xlarge',
         master_instance_bid_price=None, core_instance_count=1,
         core_instance_type=None, core_instance_bid_price=None,
@@ -6416,14 +6415,15 @@ class RailRnaElasticAllJson(object):
             intermediate_dir=intermediate_dir,
             force=force, aws_exe=aws_exe, profile=profile,
             region=region, service_role=service_role,
-            instance_profile=instance_profile, verbose=verbose,
+            instance_profile=instance_profile,
+            auto_scaling_role=auto_scaling_role, verbose=verbose,
             max_task_attempts=max_task_attempts, dbgap_key=dbgap_key)
         RailRnaElastic(base, check_manifest=check_manifest, 
-            log_uri=log_uri, ami_version=ami_version,
+            log_uri=log_uri, release_label=release_label,
             visible_to_all_users=visible_to_all_users, tags=tags,
             name=name,
             action_on_failure=action_on_failure,
-            hadoop_jar=hadoop_jar, master_instance_count=master_instance_count,
+            master_instance_count=master_instance_count,
             master_instance_type=master_instance_type,
             master_instance_bid_price=master_instance_bid_price,
             core_instance_count=core_instance_count,
@@ -6500,26 +6500,27 @@ class RailRnaElasticAllJson(object):
                     RailRnaPreprocess.protosteps(base, prep_dir, push_dir,
                                                     elastic=True),
                     base.action_on_failure,
-                    base.hadoop_jar, _elastic_step_dir,
+                    _elastic_step_dir,
                     reducer_count, base.intermediate_dir, unix=True,
                     no_direct_copy=base.no_direct_copy
                 ) + \
                 steps(
                     RailRnaAlign.protosteps(base, push_dir, elastic=True),
                     base.action_on_failure,
-                    base.hadoop_jar, _elastic_step_dir,
+                    _elastic_step_dir,
                     reducer_count, base.intermediate_dir, unix=True,
                     no_direct_copy=base.no_direct_copy
                 )
-        self._json_serial['AmiVersion'] = base.ami_version
+        self._json_serial['Applications'] = ['Hadoop']
+        self._json_serial['ReleaseLabel'] = base.release_label
         self._json_serial['ServiceRole'] = base.service_role
+        self._json_serial['AutoScalingRole'] = base.auto_scaling_role
         self._json_serial['JobFlowRole'] = base.instance_profile
         if base.log_uri is not None:
             self._json_serial['LogUri'] = base.log_uri
         else:
             self._json_serial['LogUri'] = base.output_dir + '.logs'
         self._json_serial['Name'] = base.name
-        self._json_serial['NewSupportedProducts'] = []
         self._json_serial['Tags'] = base.tags
         self._json_serial['VisibleToAllUsers'] = (
                 'true' if base.visible_to_all_users else 'false'
@@ -6531,6 +6532,7 @@ class RailRnaElasticAllJson(object):
                 + RailRnaPreprocess.srabootstrap(base)
                 + RailRnaElastic.bootstrap(base)
             )
+        self._json_serial['Configurations'] = RailRnaElastic.configurations(base)
         self.base = base
     
     @property
