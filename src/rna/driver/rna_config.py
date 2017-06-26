@@ -713,7 +713,7 @@ def step(name, inputs, output,
         'ActionOnFailure' : action_on_failure,
         'HadoopJarStep' : {
             'Jar' : 'command-runner.jar',
-            'Args' : []
+            'Args' : ['hadoop-streaming']
         }
     }
     to_return['HadoopJarStep']['Args'].extend(
@@ -2094,7 +2094,7 @@ class RailRnaElastic(object):
         to base instance of RailRnaErrors.
     """
     def __init__(self, base, check_manifest=False,
-        log_uri=None, release_label='5.6.0',
+        log_uri=None, release_label='emr-5.6.0',
         visible_to_all_users=False, tags='',
         name='Rail-RNA Job Flow',
         action_on_failure='TERMINATE_JOB_FLOW',
@@ -3178,7 +3178,7 @@ sudo ln -s /home/hadoop/.ncbi /home/.ncbi
         )
         elastic_parser.add_argument('--release-label', type=str, required=False,
             metavar='<str>',
-            default='5.6.0',
+            default='emr-5.6.0',
             help='Amazon EMR release label'
         )
         elastic_parser.add_argument('--visible-to-all-users',
@@ -3444,75 +3444,153 @@ sudo ln -s /home/hadoop/.ncbi /home/.ncbi
     @staticmethod
     def instances(base):
         assert base.master_instance_count >= 1
-        to_return = {
-            'InstanceGroups' : [
-                {
-                    'InstanceCount' : base.master_instance_count,
-                    'InstanceRole' : 'MASTER',
-                    'InstanceType': base.master_instance_type,
-                    'Name' : 'Master Instance Group'
-                }
-            ],
-            'KeepJobFlowAliveWhenNoSteps': ('true' if base.keep_alive
-                                               else 'false'),
-            'TerminationProtected': ('true' if base.termination_protected
-                                        else 'false')
+        assert base.core_instance_count >= 1
+        assert base.task_instance_count >= 0
+
+        # http://docs.aws.amazon.com/ElasticMapReduce/latest/API/API_InstanceGroup.html
+        def _instance_group(bid_price, auto_scaling, ebs_config,
+                            instance_count, instance_type, group_type):
+
+            assert instance_count > 0
+            group = {'Market': 'ON_DEMAND',
+                     'InstanceGroupType': group_type.upper(),
+                     'InstanceCount': instance_count,
+                     'InstanceType': instance_type,
+                     'Name': group_type + ' Instance Group'}
+            if bid_price is not None:
+                group['BidPrice'] = '%0.03f' % bid_price
+                group['Market'] = 'SPOT'
+            if auto_scaling is not None:
+                group['AutoScalingPolicy'] = auto_scaling
+            if ebs_config is not None:
+                group['EbsConfiguration'] = ebs_config
+            return group
+
+        do_auto_scaling = False
+        auto_scaling_policy = None
+        if do_auto_scaling:
+            # TODO: disabled, but leaving here so it's clear what's involved
+            min_capacity, max_capacity = 1, 1
+            market = 'SPOT'
+            # CHANGE_IN_CAPACITY | PERCENT_CHANGE_IN_CAPACITY | EXACT_CAPACITY
+            adjustment_type = 'CHANGE_IN_CAPACITY'
+            cool_down = 60  # min seconds b/t scaling actions
+            # positive/negative absolute/relative according to adjustment_type
+            scaling_adj = 0
+            # GREATER_THAN_OR_EQUAL | GREATER_THAN | LESS_THAN | LESS_THAN_OR_EQUAL
+            comp_op = 'GREATER_THAN'
+            auto_scaling_policy = {
+                "Constraints": {
+                    "MinCapacity": min_capacity,
+                    "MaxCapacity": max_capacity,
+                },
+                "Rules": [
+                    {"Action": {
+                        "Market": market,
+                        "SimpleScalingPolicyConfiguration": {
+                            "AdjustmentType": adjustment_type,
+                            "CoolDown": cool_down,
+                            "ScalingAdjustment": scaling_adj
+                        }},
+                     "Description": "My rule",
+                     "Name": "My rule",
+                     "Trigger": {
+                       "CloudWatchAlarmDefinition": {
+                         "ComparisonOperator": comp_op,
+                         "Dimensions": [{
+                             "Key": "string",
+                             "Value": "string"
+                         }],
+                         "EvaluationPeriods": 0,
+                         "MetricName": "blah",
+                         "Namespace": "blah",
+                         "Period": 0,
+                         "Statistic": "blah",
+                         "Threshold": 0,
+                         "Unit": "blah"
+                       }}}]}
+
+        do_ebs = False
+        ebs_config = None
+        if do_ebs:
+            # TODO: disabled, but leaving here so it's clear what's involved
+            iops = 10
+            size_gb = 10
+            vol_type = None
+            vols_per_instance = 1
+            ebs_optimized = False
+
+            block_config_1 = {
+                "VolumeSpecification": {
+                    "Iops": iops,
+                    "SizeInGB": size_gb,
+                    "VolumeType": vol_type
+                },
+                "VolumesPerInstance": vols_per_instance
+            }
+
+            block_configs = []
+            if do_ebs:
+                block_configs.append(block_config_1)
+
+            ebs_config = {
+                "EbsBlockDeviceConfigs": block_configs,
+                # "An Amazon EBS-optimized instance uses an optimized
+                # configuration stack and provides additional,
+                # dedicated capacity for Amazon EBS I/O."
+                "EbsOptimized": "true" if ebs_optimized else "false"
+            }
+
+        instance_groups = [
+            _instance_group(base.master_instance_bid_price,
+                            auto_scaling_policy,
+                            ebs_config,
+                            base.master_instance_count,
+                            base.master_instance_type,
+                            'Master'),
+            _instance_group(base.core_instance_bid_price,
+                            auto_scaling_policy,
+                            ebs_config,
+                            base.core_instance_count,
+                            base.core_instance_type,
+                            'Core')]
+
+        if base.task_instance_count > 0:
+            instance_groups.append(
+                _instance_group(base.core_instance_bid_price,
+                                auto_scaling_policy,
+                                ebs_config,
+                                base.task_instance_count,
+                                base.task_instance_type,
+                                'Task'))
+
+        # http://docs.aws.amazon.com/ElasticMapReduce/latest/API/API_JobFlowInstancesConfig.html
+        instances = {
+            "AdditionalMasterSecurityGroups": [],
+            "AdditionalSlaveSecurityGroups": [],
+            "InstanceFleets": [],
+            "InstanceGroups": instance_groups,
+            "KeepJobFlowAliveWhenNoSteps":
+                'true' if base.keep_alive else 'false',
+            "TerminationProtected":
+                'true' if base.termination_protected else 'false'
         }
-        if base.master_instance_bid_price is not None:
-            to_return['InstanceGroups'][0]['BidPrice'] \
-                = '%0.03f' % base.master_instance_bid_price
-            to_return['InstanceGroups'][0]['Market'] \
-                = 'SPOT'
-        else:
-            to_return['InstanceGroups'][0]['Market'] \
-                = 'ON_DEMAND'
-        if base.core_instance_count:
-            to_return['InstanceGroups'].append(
-                    {
-                        'InstanceCount' : base.core_instance_count,
-                        'InstanceRole' : 'CORE',
-                        'InstanceType': base.core_instance_type,
-                        'Name' : 'Core Instance Group'
-                    }
-                )
-            if base.core_instance_bid_price is not None:
-                to_return['InstanceGroups'][1]['BidPrice'] \
-                    = '%0.03f' % base.core_instance_bid_price
-                to_return['InstanceGroups'][1]['Market'] \
-                    = 'SPOT'
-            else:
-                to_return['InstanceGroups'][1]['Market'] \
-                    = 'ON_DEMAND'
-        if base.task_instance_count:
-            to_return['InstanceGroups'].append(
-                    {
-                        'InstanceCount' : base.task_instance_count,
-                        'InstanceRole' : 'TASK',
-                        'InstanceType': base.task_instance_type,
-                        'Name' : 'Task Instance Group'
-                    }
-                )
-            if base.task_instance_bid_price is not None:
-                to_return['InstanceGroups'][1]['BidPrice'] \
-                    = '%0.03f' % base.task_instance_bid_price
-                to_return['InstanceGroups'][1]['Market'] \
-                    = 'SPOT'
-            else:
-                to_return['InstanceGroups'][1]['Market'] \
-                    = 'ON_DEMAND'
+
         if base.ec2_key_name is not None:
-            to_return['Ec2KeyName'] = base.ec2_key_name
+            instances['Ec2KeyName'] = base.ec2_key_name
         if hasattr(base, 'ec2_subnet_id') and base.ec2_subnet_id is not None:
-            to_return['Ec2SubnetId'] = base.ec2_subnet_id
+            instances['Ec2SubnetId'] = base.ec2_subnet_id
         if hasattr(base, 'ec2_master_security_group_id') \
             and base.ec2_master_security_group_id is not None:
-            to_return['EmrManagedMasterSecurityGroup'] \
+            instances['EmrManagedMasterSecurityGroup'] \
                 = base.ec2_master_security_group_id
         if hasattr(base, 'ec2_slave_security_group_id') \
             and base.ec2_slave_security_group_id is not None:
-            to_return['EmrManagedSlaveSecurityGroup'] \
+            instances['EmrManagedSlaveSecurityGroup'] \
                 = base.ec2_slave_security_group_id
-        return to_return
+
+        return instances
+
 
 class RailRnaPreprocess(object):
     """ Sets parameters relevant to just the preprocessing step of a job flow.
@@ -5599,7 +5677,7 @@ class RailRnaElasticPreprocessJson(object):
         verbose=False, nucleotides_per_input=8000000, gzip_input=True,
         do_not_bin_quals=False, short_read_names=False,
         skip_bad_records=False, ignore_missing_sra_samples=False,
-        log_uri=None, release_label='5.6.0',
+        log_uri=None, release_label='emr-5.6.0',
         visible_to_all_users=False, tags='',
         name='Rail-RNA Job Flow',
         action_on_failure='TERMINATE_JOB_FLOW',
@@ -5965,7 +6043,8 @@ class RailRnaElasticAlignJson(object):
         drop_deletions=False, do_not_output_bam_by_chr=False,
         do_not_output_ave_bw_by_chr=False, do_not_drop_polyA_tails=False,
         deliverables='idx,tsv,bed,bw', bam_basename='alignments',
-        bed_basename='', tsv_basename='', log_uri=None, release_label='5.6.0',
+        bed_basename='', tsv_basename='', log_uri=None,
+        release_label='emr-5.6.0',
         visible_to_all_users=False, tags='', name='Rail-RNA Job Flow',
         action_on_failure='TERMINATE_JOB_FLOW',
         master_instance_count=1, master_instance_type='c1.xlarge',
@@ -6398,7 +6477,8 @@ class RailRnaElasticAllJson(object):
         drop_deletions=False, do_not_output_bam_by_chr=False,
         do_not_output_ave_bw_by_chr=False, do_not_drop_polyA_tails=False,
         deliverables='idx,tsv,bed,bw', bam_basename='alignments',
-        bed_basename='', tsv_basename='', log_uri=None, release_label='5.6.0',
+        bed_basename='', tsv_basename='', log_uri=None,
+        release_label='emr-5.6.0',
         visible_to_all_users=False, tags='', name='Rail-RNA Job Flow',
         action_on_failure='TERMINATE_JOB_FLOW',
         master_instance_count=1, master_instance_type='c1.xlarge',
