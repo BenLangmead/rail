@@ -275,7 +275,8 @@ def go(nucleotides_per_input=8000000, gzip_output=True, gzip_level=3,
         to_stdout=False, push='.', mover=filemover.FileMover(),
         verbose=False, scratch=None, bin_qualities=True, short_qnames=False,
         skip_bad_records=False, workspace_dir=None,
-        fastq_dump_exe='fastq-dump', ignore_missing_sra_samples=False):
+        fastq_dump_exe='fastq-dump', ignore_missing_sra_samples=False,
+        input_fn=None):
     """ Runs Rail-RNA-preprocess
 
         Input (read from stdin)
@@ -408,7 +409,10 @@ def go(nucleotides_per_input=8000000, gzip_output=True, gzip_level=3,
     fasta_cues = set(['>', ';'])
     source_dict = {}
     onward = False
-    for line in sys.stdin:
+    in_stream = sys.stdin
+    if input_fn is not None:
+        in_stream = open(input_fn, 'rb')
+    for line in in_stream:
         _input_line_count += 1
         if not line.strip(): continue
         # Kill offset from start of manifest file
@@ -461,6 +465,8 @@ def go(nucleotides_per_input=8000000, gzip_output=True, gzip_level=3,
         else:
             # Not a valid line, but continue for robustness
             continue
+    if input_fn is not None:
+        in_stream.close()
     file_number = 0
     counter.flush()
     for source_urls in source_dict:
@@ -753,24 +759,12 @@ def go(nucleotides_per_input=8000000, gzip_output=True, gzip_level=3,
                             for source_stream in source_streams:
                                 lines.append(source_stream.readline())
                         read_next_line = True
-                        is_none = [line is None for line in lines]
-                        if all(is_none):
+                        if not lines[0]:
                             break_outer_loop = True
                             break
                         line_numbers = [i + 1 for i in line_numbers]
-                        if any(is_none):
-                            # TODO: better error handling
-                            print >> sys.stderr, 'Warning: some lines None at line numbers %s' % str(lines)
-                            continue
                         lines = [line.strip() for line in lines]
-                        lens = [len(line) for line in lines]
-                        if sum(lens) == 0:
-                            # TODO: better error handling
-                            print >> sys.stderr, 'Warning: all lines blank at line numbers %s' % str(lines)
-                            continue
-                        if any([l == 0 for l in lens]):
-                            # TODO: better error handling
-                            print >> sys.stderr, 'Warning: some blank at line numbers %s' % str(lines)
+                        if len(lines[0]) == 0:
                             continue
                         bad_record_skip = False
                         if lines[0][0] in fastq_cues:
@@ -1174,6 +1168,8 @@ if __name__ == '__main__':
     parser.add_argument('--push', type=str, required=False,
         default='.',
         help='Directory in which to push output files')
+    parser.add_argument('--input', type=str, required=False,
+        help='Read manifest from given input file (default: stdin)')
     parser.add_argument('--bin-qualities', action='store_const', const=True,
         default=False,
         help='Rounds base quality score, placing it in one of five bins')
@@ -1232,7 +1228,8 @@ if __name__ == '__main__':
         mover=mover,
         workspace_dir=args.workspace_dir,
         fastq_dump_exe=args.fastq_dump_exe,
-        ignore_missing_sra_samples=args.ignore_missing_sra_samples)
+        ignore_missing_sra_samples=args.ignore_missing_sra_samples,
+        input_fn=args.input)
     print >>sys.stderr, 'DONE with preprocess.py; in/out=%d/%d; ' \
         'time=%0.3f s' % (_input_line_count, _output_line_count,
                             time.time() - start_time)
