@@ -2621,6 +2621,11 @@ set -e
 export HOME=/home/hadoop
 sudo ln -s /home/hadoop/.s3cfg /home/.s3cfg
 
+[ ! -f /usr/bin/python2.7 ] && echo "No python2.7" && exit 1
+if [ ! -f /usr/bin/python2 ] ; then
+    sudo ln -s -f /usr/bin/python2.7 /usr/bin/python2
+fi
+
 curl -OL https://github.com/s3tools/s3cmd/releases/download/v1.6.1/s3cmd-1.6.1.tar.gz
 tar xvzf s3cmd-1.6.1.tar.gz
 cd s3cmd-1.6.1
@@ -2681,7 +2686,7 @@ RAILZIP=$1
 JARTARGET=$2
 mkdir -p ${{JARTARGET}}
 shift 2
-s3cmd get $RAILZIP
+aws s3 cp $RAILZIP .
 mkdir -p sandbox
 cd sandbox
 unzip ../{rail_zipped} -d ./
@@ -2690,7 +2695,7 @@ for JAR in relevant-elephant custom-output-formats mod-partitioner
 do
     rm -rf ${{JAR}}_out
     mkdir -p ${{JAR}}_out
-    javac -classpath $(find ~/share/ *.jar | tr '\\n' ':') -d ${{JAR}}_out ${{JAR}}/*.java
+    javac -classpath $(find /usr/lib/ -name '*.jar' | tr '\\n' ':') -d ${{JAR}}_out ${{JAR}}/*.java
     jar -cvf ${{JAR}}.jar -C ${{JAR}}_out .
     mv ${{JAR}}.jar ${{JARTARGET}}/
 done
@@ -2707,13 +2712,13 @@ sudo python27 {rail_zipped} $@
                                     )
         ansible.put(install_rail_bootstrap, base.install_rail_bootstrap)
         copy_bootstrap = os.path.join(temp_dependency_dir,
-                                                's3cmd_s3.sh')
+                                                'dl.sh')
         base.fastq_dump_exe = _elastic_fastq_dump_exe
         base.vdb_config_exe = _elastic_vdb_config_exe
         with open(copy_bootstrap, 'w') as script_stream:
              print >>script_stream, (
 """#!/usr/bin/env bash
-# s3cmd_s3.sh
+# dl.sh
 #
 # Download a file from an S3 bucket to given directory.  Optionally rename it.
 #
@@ -2725,10 +2730,7 @@ set -e
 mkdir -p ${2}
 cd ${2}
 fn=`basename ${1}`
-s3cmd get ${1} . || { echo 's3cmd get failed' ; exit 1; }
-if [ -n "${3}" ] ; then
-    mv $fn ${3} || true
-fi
+aws s3 cp ${1} ${3} || { echo 'aws s3 cp failed' ; exit 1; }
 """
                 )
         base.copy_bootstrap = path_join(
