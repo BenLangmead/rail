@@ -3344,12 +3344,12 @@ sudo ln -s /home/hadoop/.ncbi /home/.ncbi
         # http://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-plan-debugging.html
         return [
             {
-                'ActionOnFailure' : 'TERMINATE_JOB_FLOW',
+                'ActionOnFailure' : 'TERMINATE_CLUSTER',
                 'HadoopJarStep' : {
                     'Args' : [ 'state-pusher-script' ],
                     'Jar' : 'command-runner.jar'
                 },
-                'Name' : 'Enable Debugging'
+                'Name' : 'Setup Hadoop Debugging'
             }
         ]
 
@@ -3453,10 +3453,10 @@ sudo ln -s /home/hadoop/.ncbi /home/.ncbi
 
             assert instance_count > 0
             group = {'Market': 'ON_DEMAND',
-                     'InstanceGroupType': group_type.upper(),
+                     'InstanceRole': group_type.upper(),
                      'InstanceCount': instance_count,
                      'InstanceType': instance_type,
-                     'Name': group_type + ' Instance Group'}
+                     'Name': group_type.upper()}
             if bid_price is not None:
                 group['BidPrice'] = '%0.03f' % bid_price
                 group['Market'] = 'SPOT'
@@ -5744,7 +5744,8 @@ class RailRnaElasticPreprocessJson(object):
                     reducer_count, base.intermediate_dir, unix=True,
                     no_direct_copy=base.no_direct_copy
                 )
-        self._json_serial['Applications'] = ['Hadoop']
+        # This doesn't work!
+        #self._json_serial['Applications'] = ['Hadoop']
         self._json_serial['ReleaseLabel'] = base.release_label
         self._json_serial['ServiceRole'] = base.service_role
         self._json_serial['AutoScalingRole'] = base.auto_scaling_role
