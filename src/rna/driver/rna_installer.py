@@ -55,11 +55,13 @@ class RailRnaInstaller(object):
         add_symlinks: adds symlinks for all installed dependencies
             to /usr/local/bin if installing for all users. Useful in elastic
             mode so paths to installed dependencies need not be specified
+        print_error: if we have to bail, print full installation log to stderr
     """
 
     def __init__(self, zip_name, curl_exe=None, install_dir=None,
                     no_dependencies=False, prep_dependencies=False,
-                    yes=False, me=False, add_symlinks=False):
+                    yes=False, me=False, add_symlinks=False,
+                    print_error=True):
         print_to_screen(u"""{0} Rail-RNA v{1} Installer""".format(
                                         u'\u2200', version_number)
                                     )
@@ -91,6 +93,7 @@ class RailRnaInstaller(object):
         self.me = me
         self.prep_dependencies = prep_dependencies
         self.add_symlinks = add_symlinks
+        self.print_error = print_error
 
     def __enter__(self):
         return self
@@ -105,6 +108,10 @@ class RailRnaInstaller(object):
                                             'rail-rna_installer.log')
         shutil.copyfile(self.log_file, new_log_file)
         print_to_screen('Installation log may be found at %s.' % new_log_file)
+        if self.print_error:
+            with open(new_log_file) as fh:
+                for ln in fh:
+                    print >> sys.stderr, ln.rstrip()
         sys.exit(1)
 
     def _yes_no_query(self, question, answer=None):

@@ -62,6 +62,11 @@ if zipfile.is_zipfile(containing_dir):
             help=('answers "yes" to all user prompts, installing for all '
                   'users; overrided by --me')
         )
+    parser.add_argument('--print-log-on-error', action='store_const',
+            const=True,
+            default=False,
+            help=('on error, prints entire log to stderr')
+        )
     parser.add_argument('-m', '--me', action='store_const',
             const=True,
             default=False,
@@ -86,7 +91,9 @@ if zipfile.is_zipfile(containing_dir):
                             no_dependencies=args.no_dependencies,
                             prep_dependencies=args.prep_dependencies,
                             add_symlinks=args.symlink_dependencies,
-                            yes=args.yes, me=args.me) as railrna_installer:
+                            yes=args.yes, me=args.me,
+                            print_error=args.print_log_on_error) \
+            as railrna_installer:
         railrna_installer.install()
     sys.exit(0)
 
