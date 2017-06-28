@@ -19,7 +19,7 @@ linux_dependencies = {
     'bowtie1' : ['http://downloads.sourceforge.net/project/bowtie-bio/'
                  'bowtie/1.2.1.1/bowtie-1.2.1.1-linux-x86_64.zip'],
     'bowtie2' : ['https://s3.amazonaws.com/rail-emr/dependencies/'
-                 'bowtie2/2.3.2/bowtie2-2.3.2-legacy-linux-x86_64.zip'],
+                 'bowtie2-2.3.2.zip'],
     'bedgraphtobigwig' : ['ftp://ftp.ccb.jhu.edu/pub/langmead/rail/'
                           'linux.x86_64/bedGraphToBigWig',
                           'http://verve.webfactional.com/mirror/linux/'
