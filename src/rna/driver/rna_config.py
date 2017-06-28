@@ -2514,7 +2514,7 @@ class RailRnaElastic(object):
         with open(copy_index_bootstrap, 'w') as script_stream:
              print >>script_stream, (
 """#!/usr/bin/env bash
-set -e
+set -ex
 
 mkdir -p $1
 cd $1
@@ -2617,7 +2617,7 @@ cd ..
         with open(install_s3cmd_bootstrap, 'w') as script_stream:
              print >>script_stream, (
 """#!/usr/bin/env bash
-set -e
+set -ex
 export HOME=/home/hadoop
 sudo ln -s /home/hadoop/.s3cfg /home/.s3cfg
 
@@ -2676,7 +2676,7 @@ EOF
 # $1: where to find Rail
 # $2: where JARs should be copied
 # $3 on: args to pass to Rail-RNA installer
-set -e
+set -ex
 export HOME=/home/hadoop
 
 # Must make sure /mnt/space exists before subsequent bootstraps
@@ -2695,7 +2695,8 @@ for JAR in relevant-elephant custom-output-formats mod-partitioner
 do
     rm -rf ${{JAR}}_out
     mkdir -p ${{JAR}}_out
-    javac -classpath $(find /usr/lib/ -name '*.jar' | tr '\\n' ':') -d ${{JAR}}_out ${{JAR}}/*.java
+    classp=$(find /usr/lib -name '*.jar' | tr '\\n' ':' | sed 's/:$//')
+    javac -classpath ${{classp}} -d ${{JAR}}_out ${{JAR}}/*.java
     jar -cvf ${{JAR}}.jar -C ${{JAR}}_out .
     mv ${{JAR}}.jar ${{JARTARGET}}/
 done
@@ -2726,7 +2727,7 @@ sudo python27 {rail_zipped} $@
 # 1. s3:// URL to copy from
 # 2. Local directory to copy to
 # 3. If specified, name to rename file to
-set -e
+set -ex
 mkdir -p ${2}
 cd ${2}
 fn=`basename ${1}`
@@ -5746,8 +5747,7 @@ class RailRnaElasticPreprocessJson(object):
                     reducer_count, base.intermediate_dir, unix=True,
                     no_direct_copy=base.no_direct_copy
                 )
-        # This doesn't work!
-        #self._json_serial['Applications'] = ['Hadoop']
+        self._json_serial['Applications'] = [{'Name': 'Hadoop'}]
         self._json_serial['ReleaseLabel'] = base.release_label
         self._json_serial['ServiceRole'] = base.service_role
         self._json_serial['AutoScalingRole'] = base.auto_scaling_role
@@ -6146,7 +6146,7 @@ class RailRnaElasticAlignJson(object):
                     reducer_count, base.intermediate_dir, unix=True,
                     no_direct_copy=base.no_direct_copy
                 )
-        self._json_serial['Applications'] = ['Hadoop']
+        self._json_serial['Applications'] = [{'Name': 'Hadoop'}]
         self._json_serial['ReleaseLabel'] = base.release_label
         self._json_serial['ServiceRole'] = base.service_role
         self._json_serial['AutoScalingRole'] = base.auto_scaling_role
@@ -6594,7 +6594,7 @@ class RailRnaElasticAllJson(object):
                     reducer_count, base.intermediate_dir, unix=True,
                     no_direct_copy=base.no_direct_copy
                 )
-        self._json_serial['Applications'] = ['Hadoop']
+        self._json_serial['Applications'] = [{'Name': 'Hadoop'}]
         self._json_serial['ReleaseLabel'] = base.release_label
         self._json_serial['ServiceRole'] = base.service_role
         self._json_serial['AutoScalingRole'] = base.auto_scaling_role
