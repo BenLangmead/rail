@@ -3489,7 +3489,8 @@ sudo ln -s /home/hadoop/.ncbi /home/.ncbi
                         '-m',
                         'mapreduce.job.maps=%d' % base.total_cores,
                         '-e',
-                        'fs.s3.enableServerSideEncryption=true'
+                        'fs.s3.enableServerSideEncryption=false'
+                        #'fs.s3.enableServerSideEncryption=true'
                     ] + (['-e', 'fs.s3.consistent=true']
                             if base.consistent_view
                             else ['-e', 'fs.s3.consistent=false']),
